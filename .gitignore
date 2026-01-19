@@ -1,0 +1,44 @@
+# WordPress runtime (no versionar)
+uploads/
+upgrade/
+cache/
+wflogs/
+ai1wm-backups/
+backups/
+backup/
+tmp/
+temp/
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node / build (por si acaso)
+node_modules/
+dist/
+build/
+
+# Backups locales
+*.bak
+*.swp
+*.swo
+*~
+
+# No versionar plugins de terceros si no los editas (ajustaremos luego si hace falta)
+plugins/*
+!plugins/README.md
+
+# Sí versionar tu theme y tu(s) plugin(s) propios (los añadiremos luego)
+themes/
+!themes/avada-viaje-child/
+# WP core dentro de wp-content (no versionar)
+index.php
+languages/
+
+# Logs / backups de plugins
+debug.log
+updraft/
+
