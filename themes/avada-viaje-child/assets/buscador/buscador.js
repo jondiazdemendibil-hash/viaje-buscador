@@ -2388,7 +2388,7 @@
 
                     if (abs === 0) {
                         card.classList.add('is-active');
-                        zIndex = 6;
+                        zIndex = 10;
                     } else if (abs === 1) {
                         card.classList.remove('is-active');
                         tx = stepXValue * txFactors[0] * dir;
@@ -2470,6 +2470,8 @@
         carouselControls.addEventListener('click', (e) => {
             const btn = e.target.closest('.carousel-nav-btn');
             if (!btn) return;
+            e.stopPropagation();
+            e.preventDefault();
             if (btn.classList.contains('carousel-prev')) goToCarousel(currentCarousel - 1);
             if (btn.classList.contains('carousel-next')) goToCarousel(currentCarousel + 1);
         });
