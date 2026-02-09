@@ -3665,6 +3665,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Detectar si estamos en mobile
+    // Mobile viewports (≤1023px) use simplified 2D carousel to prevent
+    // the search input from being squashed by 3D transforms
     function isMobile() {
         return window.innerWidth <= 1023;
     }

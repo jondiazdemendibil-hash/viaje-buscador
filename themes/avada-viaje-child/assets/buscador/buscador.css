@@ -974,7 +974,9 @@
         max-width: none;
     }
 
-    /* Simplify carousel on mobile */
+    /* Simplify carousel on mobile
+       Reduced height and disabled 3D effects to prevent
+       search input from being squashed behind carousel */
     .carousel-3d {
         height: min(320px, 45vh);
         perspective: none;
