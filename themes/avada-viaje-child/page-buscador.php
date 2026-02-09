@@ -242,6 +242,8 @@ $carousel_items = [
 
                     <section class="carousel-3d-section" aria-label="<?php echo esc_attr__('Recomendaciones', 'vw'); ?>">
                         <div class="carousel-3d">
+                            <button type="button" class="carousel-nav-btn carousel-prev" aria-label="<?php echo esc_attr__('Anterior', 'vw'); ?>">‹</button>
+                            <button type="button" class="carousel-nav-btn carousel-next" aria-label="<?php echo esc_attr__('Siguiente', 'vw'); ?>">›</button>
                             <div class="carousel-stack" id="carouselStack">
                                 <?php foreach ($carousel_items as $index => $item) : ?>
                                     <article
