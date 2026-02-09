@@ -758,12 +758,21 @@
     place-items: center;
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .carousel-nav-btn:hover {
     background: rgba(0, 0, 0, 0.75);
     transform: translateY(-50%) scale(1.04);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.carousel-nav-btn:active {
+    background: rgba(0, 0, 0, 0.85);
+    transform: translateY(-50%) scale(0.98);
 }
 
 .carousel-nav-btn:focus-visible {

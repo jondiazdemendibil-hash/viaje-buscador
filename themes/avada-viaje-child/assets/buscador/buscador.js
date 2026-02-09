@@ -3734,15 +3734,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Click en flechas
     if (prevBtn) {
-        prevBtn.addEventListener('click', function () {
+        prevBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
             goTo(current - 1);
         });
+        prevBtn.addEventListener('touchstart', function (e) {
+            e.stopPropagation();
+        }, { passive: true });
     }
 
     if (nextBtn) {
-        nextBtn.addEventListener('click', function () {
+        nextBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
             goTo(current + 1);
         });
+        nextBtn.addEventListener('touchstart', function (e) {
+            e.stopPropagation();
+        }, { passive: true });
     }
 
     // Click en dots
