@@ -168,7 +168,7 @@ get_header();
                         </div>
 
                         <div class="carousel-column">
-                            <!-- Carrusel: zona reservada (limpia) -->
+                            <!-- Zona reservada para carrusel -->
                         </div>
                     </div>
 
