@@ -556,17 +556,3 @@ add_filter('template_include', function($template) {
     }
     return $template;
 }, 99);
-
-// Incluir AJAX handler del buscador global
-require_once get_stylesheet_directory() . '/inc/ajax-buscador.php';
-
-// Localizar script para AJAX
-function buscador_enqueue_scripts() {
-    if (is_page_template('page-buscador.php')) {
-        wp_localize_script('jquery', 'buscadorAjax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('buscador_nonce')
-        ));
-    }
-}
-add_action('wp_enqueue_scripts', 'buscador_enqueue_scripts');
