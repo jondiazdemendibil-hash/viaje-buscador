@@ -1094,16 +1094,19 @@
                 if (screen1El) {
                     screen1El.style.display = 'none';
                     screen1El.setAttribute('aria-hidden', 'true');
+                    screen1El.classList.remove('active');
                 }
                 if (screen2El) {
                     screen2El.style.display = 'block';
                     screen2El.removeAttribute('aria-hidden');
                     screen2El.removeAttribute('hidden');
+                    screen2El.classList.add('active');
                 }
             } else {
                 if (screen2El) {
                     screen2El.style.display = 'none';
                     screen2El.setAttribute('aria-hidden', 'true');
+                    screen2El.classList.remove('active');
                 }
                 if (screen1El) {
                     screen1El.removeAttribute('aria-hidden');
@@ -1112,6 +1115,7 @@
                     if (window.getComputedStyle(screen1El).display === 'none') {
                         screen1El.style.display = 'block';
                     }
+                    screen1El.classList.add('active');
                 }
             }
         }
@@ -3628,3 +3632,170 @@
             handleScroll();
         })();
         }
+
+/* ═══════════════════════════════════════════════════════════════════════
+    CARRUSEL 3D DE RECOMENDACIONES — Motor de navegación
+    ═══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+     'use strict';
+
+    var stack = document.getElementById('carouselStack');
+    if (!stack) return; // Si no hay carrusel en la página, salir
+
+    var cards = Array.from(stack.querySelectorAll('.carousel-card'));
+    var dotsContainer = document.getElementById('carouselDots');
+    var dots = dotsContainer ? Array.from(dotsContainer.querySelectorAll('.carousel-dot')) : [];
+    var counterEl = document.getElementById('carouselCounter');
+
+    var total = cards.length;
+    if (total === 0) return;
+
+    var current = 0;
+
+    // Parámetros de distribución 3D
+    var stepX = 180;
+    var stepY = 14;
+    var stepRotate = 6;
+    var depthStep = 200;
+
+    var opacityByLevel = { 0: 1, 1: 0.7, 2: 0.5, 3: 0.2 };
+
+    function normalize(index) {
+        return ((index % total) + total) % total;
+    }
+
+    // Controles existentes en el HTML
+    var prevBtn = document.querySelector('.carousel-prev');
+    var nextBtn = document.querySelector('.carousel-next');
+
+    // Render: posicionar todas las cards
+    function render() {
+        cards.forEach(function (card, index) {
+            var offset = (index - current + total) % total;
+            var signed = offset > total / 2 ? offset - total : offset;
+            var abs = Math.abs(signed);
+            var dir = signed > 0 ? 1 : signed < 0 ? -1 : 0;
+
+            var tx = 0, ty = 0, tz = 0, scale = 1, rotate = 0, opacity = 1, zIndex = 6;
+
+            if (abs === 0) {
+                card.classList.add('is-active');
+                zIndex = 6;
+            } else if (abs === 1) {
+                card.classList.remove('is-active');
+                tx = stepX * dir;
+                ty = stepY;
+                tz = -depthStep;
+                scale = 0.82;
+                rotate = stepRotate * dir;
+                opacity = opacityByLevel[1];
+                zIndex = 4;
+            } else if (abs === 2) {
+                card.classList.remove('is-active');
+                tx = stepX * 1.6 * dir;
+                ty = stepY * 2;
+                tz = -depthStep * 1.6;
+                scale = 0.7;
+                rotate = stepRotate * 1.6 * dir;
+                opacity = opacityByLevel[2];
+                zIndex = 2;
+            } else {
+                card.classList.remove('is-active');
+                tx = stepX * 2.1 * dir;
+                ty = stepY * 2.6;
+                tz = -depthStep * 2.1;
+                scale = 0.62;
+                rotate = stepRotate * 2 * dir;
+                opacity = opacityByLevel[3];
+                zIndex = 1;
+            }
+
+            card.style.transform = 'translate(-50%, -50%) translateX(' + tx + 'px) translateY(' + ty + 'px) translateZ(' + tz + 'px) scale(' + scale + ') rotate(' + rotate + 'deg)';
+            card.style.opacity = opacity;
+            card.style.zIndex = zIndex;
+            card.style.filter = abs === 0 ? 'none' : 'brightness(0.95)';
+        });
+
+        // Actualizar dots
+        dots.forEach(function (dot, i) {
+            dot.classList.toggle('active', i === current);
+        });
+
+        // Actualizar contador
+        if (counterEl) {
+            counterEl.textContent = (current + 1) + ' de ' + total;
+        }
+    }
+
+    function goTo(index) {
+        current = normalize(index);
+        render();
+    }
+
+    // Click en flechas
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            goTo(current - 1);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            goTo(current + 1);
+        });
+    }
+
+    // Click en dots
+    if (dotsContainer) {
+        dotsContainer.addEventListener('click', function (e) {
+            var dot = e.target.closest('.carousel-dot');
+            if (!dot) return;
+            var idx = parseInt(dot.getAttribute('data-index'), 10);
+            if (!isNaN(idx)) goTo(idx);
+        });
+    }
+
+    // Teclado (solo si el carrusel está visible)
+    document.addEventListener('keydown', function (e) {
+        var section = document.getElementById('screen1');
+        if (section && section.style.display === 'none') return;
+        if (e.key === 'ArrowLeft') goTo(current - 1);
+        if (e.key === 'ArrowRight') goTo(current + 1);
+    });
+
+    // Swipe táctil
+    var startX = 0;
+    var startY = 0;
+    var isSwiping = false;
+
+    stack.addEventListener('touchstart', function (e) {
+        var touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        isSwiping = false;
+    }, { passive: true });
+
+    stack.addEventListener('touchmove', function (e) {
+        var touch = e.touches[0];
+        var dx = touch.clientX - startX;
+        var dy = touch.clientY - startY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
+            isSwiping = true;
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    stack.addEventListener('touchend', function (e) {
+        if (!isSwiping) return;
+        var touch = e.changedTouches[0];
+        var dx = touch.clientX - startX;
+        if (dx < -30) goTo(current + 1);
+        if (dx > 30) goTo(current - 1);
+    });
+
+    // Re-render en resize
+    window.addEventListener('resize', render);
+
+    // Primer render
+    render();
+});
