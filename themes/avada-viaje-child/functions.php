@@ -563,9 +563,25 @@ require_once get_stylesheet_directory() . '/inc/ajax-buscador.php';
 // Localizar script para AJAX
 function buscador_enqueue_scripts() {
     if (is_page_template('page-buscador.php')) {
-        wp_localize_script('jquery', 'buscadorAjax', array(
+        // CSS del buscador
+        wp_enqueue_style(
+            'vw-buscador-css',
+            get_stylesheet_directory_uri() . '/assets/buscador/buscador.css',
+            [],
+            filemtime(get_stylesheet_directory() . '/assets/buscador/buscador.css')
+        );
+        // JS del buscador (en footer, después de jQuery)
+        wp_enqueue_script(
+            'vw-buscador-js',
+            get_stylesheet_directory_uri() . '/assets/buscador/buscador.js',
+            ['jquery'],
+            filemtime(get_stylesheet_directory() . '/assets/buscador/buscador.js'),
+            true
+        );
+        // AJAX localization
+        wp_localize_script('vw-buscador-js', 'buscadorAjax', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('buscador_nonce')
+            'nonce'   => wp_create_nonce('buscador_nonce')
         ));
     }
 }
