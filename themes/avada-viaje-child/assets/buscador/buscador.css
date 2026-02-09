@@ -920,6 +920,8 @@
 
 /* ─────────────────────────────────────────────────────────────
    RESPONSIVE
+   Mobile Fix: Carousel height reduced and 3D effects disabled
+   to prevent search input from being squashed on small screens
 ───────────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
     .screen-1-content {
@@ -929,6 +931,16 @@
     .search-column,
     .carousel-column {
         width: 100%;
+    }
+
+    .search-column {
+        padding-top: 6vh;
+        padding-bottom: 24px;
+    }
+
+    .carousel-column {
+        padding: 24px 16px;
+        min-height: auto;
     }
 
     .search-tabs {
@@ -964,6 +976,24 @@
         max-width: none;
     }
 
+    /* Simplify carousel on mobile
+       Reduced height and disabled 3D effects to prevent
+       search input from being squashed behind carousel */
+    .carousel-3d {
+        height: min(320px, 45vh);
+        perspective: none;
+    }
+
+    .carousel-stack {
+        perspective: none;
+        transform-style: flat;
+    }
+
+    .carousel-title {
+        font-size: clamp(0.9rem, 2.5vw, 1rem);
+        margin-bottom: 12px;
+    }
+
     .screen-2 {
         padding: 16px;
     }
@@ -993,14 +1023,19 @@
 @media (max-width: 600px) {
     .carousel-3d-section {
         --carousel-card-w: 260px;
-        --carousel-card-h: 360px;
-        --carousel-title-size: 20px;
-        --carousel-line-size: 13px;
-        --carousel-content-top: calc(33.333% + 60px);
+        --carousel-card-h: 320px;
+        --carousel-title-size: 18px;
+        --carousel-line-size: 12px;
+        --carousel-content-top: calc(33.333% + 50px);
     }
 
     .carousel-3d {
-        height: min(360px, 55vh);
+        height: min(300px, 42vh);
+        perspective: none;
+    }
+
+    .carousel-stack {
+        perspective: none;
     }
 
     .carousel-nav-btn {
@@ -1012,6 +1047,21 @@
     .carousel-dot {
         width: 6px;
         height: 6px;
+    }
+
+    .carousel-title {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+
+    .search-column {
+        padding-top: 4vh;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .search-section {
+        padding: 20px;
     }
 }
 
