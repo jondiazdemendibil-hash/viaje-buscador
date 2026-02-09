@@ -1918,6 +1918,7 @@
 
         .carousel-card.is-active .carousel-card-controls {
             opacity: 1;
+            pointer-events: auto;
         }
 
         .carousel-nav-btn {
@@ -2564,10 +2565,18 @@
                 align-items: center;
                 justify-content: center;
                 gap: 6px;
+                z-index: 10;
             }
 
             .carousel-dots {
                 margin-top: 0;
+            }
+
+            .carousel-dot {
+                width: 16px;
+                height: 16px;
+                padding: 14px;
+                background-clip: content-box;
             }
 
             .carousel-counter {

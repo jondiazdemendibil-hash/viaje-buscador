@@ -7,6 +7,33 @@ add_action('wp_enqueue_scripts', function(){
   wp_enqueue_script('leaflet-js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',[], null, true);
 });
 
+// Cargar CSS + JS + AJAX del buscador
+function buscador_enqueue_scripts() {
+    if (is_page_template('page-buscador.php')) {
+        // CSS
+        wp_enqueue_style(
+            'vw-buscador-css',
+            get_stylesheet_directory_uri() . '/assets/buscador/buscador.css',
+            [],
+            filemtime(get_stylesheet_directory() . '/assets/buscador/buscador.css')
+        );
+        // JS (en footer, tras jQuery)
+        wp_enqueue_script(
+            'vw-buscador-js',
+            get_stylesheet_directory_uri() . '/assets/buscador/buscador.js',
+            ['jquery'],
+            filemtime(get_stylesheet_directory() . '/assets/buscador/buscador.js'),
+            true
+        );
+        // AJAX
+        wp_localize_script('vw-buscador-js', 'buscadorAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('buscador_nonce')
+        ));
+    }
+}
+add_action('wp_enqueue_scripts', 'buscador_enqueue_scripts');
+
 add_theme_support('post-thumbnails');
 add_theme_support('responsive-embeds');
 
@@ -557,16 +584,3 @@ add_filter('template_include', function($template) {
     return $template;
 }, 99);
 
-// Incluir AJAX handler del buscador global
-require_once get_stylesheet_directory() . '/inc/ajax-buscador.php';
-
-// Localizar script para AJAX
-function buscador_enqueue_scripts() {
-    if (is_page_template('page-buscador.php')) {
-        wp_localize_script('jquery', 'buscadorAjax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('buscador_nonce')
-        ));
-    }
-}
-add_action('wp_enqueue_scripts', 'buscador_enqueue_scripts');

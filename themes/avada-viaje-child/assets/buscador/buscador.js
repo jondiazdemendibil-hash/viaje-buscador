@@ -2482,6 +2482,7 @@
         let carouselStartX = 0;
         let carouselStartY = 0;
         let carouselSwiping = false;
+        let carouselStartTime = 0;
 
         if (carouselStack) {
             carouselStack.addEventListener('touchstart', (e) => {
@@ -2489,6 +2490,7 @@
                 carouselStartX = touch.clientX;
                 carouselStartY = touch.clientY;
                 carouselSwiping = false;
+                carouselStartTime = Date.now();
             }, { passive: true });
 
             carouselStack.addEventListener('touchmove', (e) => {
@@ -2503,10 +2505,11 @@
 
             carouselStack.addEventListener('touchend', (e) => {
                 if (!carouselSwiping) return;
+                if (Date.now() - carouselStartTime > 500) return;
                 const touch = e.changedTouches[0];
                 const dx = touch.clientX - carouselStartX;
-                if (dx < -30) goToCarousel(currentCarousel + 1);
-                if (dx > 30) goToCarousel(currentCarousel - 1);
+                if (dx < -20) goToCarousel(currentCarousel + 1);
+                if (dx > 20) goToCarousel(currentCarousel - 1);
             });
         }
 
@@ -3673,9 +3676,17 @@
         });
 
         function setScrollLock(locked) {
-            const overflowValue = locked ? 'hidden' : '';
-            document.documentElement.style.overflow = overflowValue;
-            document.body.style.overflow = overflowValue;
+            if (locked) {
+                document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+                document.body.style.top = `-${window.scrollY}px`;
+            } else {
+                const scrollY = document.body.style.top;
+                document.body.style.position = '';
+                document.body.style.width = '';
+                document.body.style.top = '';
+                window.scrollTo(0, parseInt(scrollY || '0') * -1);
+            }
         }
 
         const DEBUG_SCROLL = false;
