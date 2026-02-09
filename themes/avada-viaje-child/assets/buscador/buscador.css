@@ -194,7 +194,7 @@
 
 /* ─────────────────────────────────────────────────────────────
    SEARCH PANEL
-───────────────────────────────────────────────  ───────────── */
+──────────────────────────────────────────────  ───────────── */
 .search-section {
     background: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -740,6 +740,45 @@
     color: #888;
 }
 
+.carousel-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 600;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.carousel-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.75);
+    transform: translateY(-50%) scale(1.04);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.carousel-nav-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.carousel-prev {
+    left: 12px;
+}
+
+.carousel-next {
+    right: 12px;
+}
+
 .fav-btn {
     position: absolute;
     top: 12px;
@@ -747,7 +786,7 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px solid rgba(0,0,0,0.12);
+    border: 1px solid rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.85);
     display: flex;
     align-items: center;
@@ -962,6 +1001,12 @@
 
     .carousel-3d {
         height: min(360px, 55vh);
+    }
+
+    .carousel-nav-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
     }
 
     .carousel-dot {
