@@ -3664,12 +3664,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return ((index % total) + total) % total;
     }
 
+    // Detectar si estamos en mobile
+    function isMobile() {
+        return window.innerWidth <= 1023;
+    }
+
     // Controles existentes en el HTML
     var prevBtn = document.querySelector('.carousel-prev');
     var nextBtn = document.querySelector('.carousel-next');
 
     // Render: posicionar todas las cards
     function render() {
+        var mobile = isMobile();
+        
         cards.forEach(function (card, index) {
             var offset = (index - current + total) % total;
             var signed = offset > total / 2 ? offset - total : offset;
@@ -3678,39 +3685,66 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var tx = 0, ty = 0, tz = 0, scale = 1, rotate = 0, opacity = 1, zIndex = 6;
 
-            if (abs === 0) {
-                card.classList.add('is-active');
-                zIndex = 6;
-            } else if (abs === 1) {
-                card.classList.remove('is-active');
-                tx = stepX * dir;
-                ty = stepY;
-                tz = -depthStep;
-                scale = 0.82;
-                rotate = stepRotate * dir;
-                opacity = opacityByLevel[1];
-                zIndex = 4;
-            } else if (abs === 2) {
-                card.classList.remove('is-active');
-                tx = stepX * 1.6 * dir;
-                ty = stepY * 2;
-                tz = -depthStep * 1.6;
-                scale = 0.7;
-                rotate = stepRotate * 1.6 * dir;
-                opacity = opacityByLevel[2];
-                zIndex = 2;
+            if (mobile) {
+                // Modo 2D simplificado para mobile
+                if (abs === 0) {
+                    card.classList.add('is-active');
+                    zIndex = 6;
+                    opacity = 1;
+                    scale = 1;
+                } else if (abs === 1) {
+                    card.classList.remove('is-active');
+                    tx = 60 * dir;
+                    ty = 8;
+                    scale = 0.85;
+                    opacity = 0.6;
+                    zIndex = 4;
+                } else {
+                    card.classList.remove('is-active');
+                    tx = 100 * dir;
+                    ty = 12;
+                    scale = 0.7;
+                    opacity = 0.3;
+                    zIndex = 2;
+                }
+                // Sin rotación ni profundidad en mobile
+                card.style.transform = 'translate(-50%, -50%) translateX(' + tx + 'px) translateY(' + ty + 'px) scale(' + scale + ')';
             } else {
-                card.classList.remove('is-active');
-                tx = stepX * 2.1 * dir;
-                ty = stepY * 2.6;
-                tz = -depthStep * 2.1;
-                scale = 0.62;
-                rotate = stepRotate * 2 * dir;
-                opacity = opacityByLevel[3];
-                zIndex = 1;
+                // Modo 3D completo para desktop
+                if (abs === 0) {
+                    card.classList.add('is-active');
+                    zIndex = 6;
+                } else if (abs === 1) {
+                    card.classList.remove('is-active');
+                    tx = stepX * dir;
+                    ty = stepY;
+                    tz = -depthStep;
+                    scale = 0.82;
+                    rotate = stepRotate * dir;
+                    opacity = opacityByLevel[1];
+                    zIndex = 4;
+                } else if (abs === 2) {
+                    card.classList.remove('is-active');
+                    tx = stepX * 1.6 * dir;
+                    ty = stepY * 2;
+                    tz = -depthStep * 1.6;
+                    scale = 0.7;
+                    rotate = stepRotate * 1.6 * dir;
+                    opacity = opacityByLevel[2];
+                    zIndex = 2;
+                } else {
+                    card.classList.remove('is-active');
+                    tx = stepX * 2.1 * dir;
+                    ty = stepY * 2.6;
+                    tz = -depthStep * 2.1;
+                    scale = 0.62;
+                    rotate = stepRotate * 2 * dir;
+                    opacity = opacityByLevel[3];
+                    zIndex = 1;
+                }
+                card.style.transform = 'translate(-50%, -50%) translateX(' + tx + 'px) translateY(' + ty + 'px) translateZ(' + tz + 'px) scale(' + scale + ') rotate(' + rotate + 'deg)';
             }
 
-            card.style.transform = 'translate(-50%, -50%) translateX(' + tx + 'px) translateY(' + ty + 'px) translateZ(' + tz + 'px) scale(' + scale + ') rotate(' + rotate + 'deg)';
             card.style.opacity = opacity;
             card.style.zIndex = zIndex;
             card.style.filter = abs === 0 ? 'none' : 'brightness(0.95)';
