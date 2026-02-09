@@ -920,6 +920,8 @@
 
 /* ─────────────────────────────────────────────────────────────
    RESPONSIVE
+   Mobile Fix: Carousel height reduced and 3D effects disabled
+   to prevent search input from being squashed on small screens
 ───────────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
     .screen-1-content {

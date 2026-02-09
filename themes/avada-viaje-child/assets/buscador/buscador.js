@@ -3635,6 +3635,10 @@
 
 /* ═══════════════════════════════════════════════════════════════════════
     CARRUSEL 3D DE RECOMENDACIONES — Motor de navegación
+    
+    Mobile Fix: Adapts to viewport width
+    - Desktop (>1023px): Full 3D carousel with perspective and rotation
+    - Mobile (≤1023px): Simplified 2D carousel to prevent layout issues
     ═══════════════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
      'use strict';
