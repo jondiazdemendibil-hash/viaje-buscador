@@ -1094,19 +1094,16 @@
                 if (screen1El) {
                     screen1El.style.display = 'none';
                     screen1El.setAttribute('aria-hidden', 'true');
-                    screen1El.classList.remove('active');
                 }
                 if (screen2El) {
                     screen2El.style.display = 'block';
                     screen2El.removeAttribute('aria-hidden');
                     screen2El.removeAttribute('hidden');
-                    screen2El.classList.add('active');
                 }
             } else {
                 if (screen2El) {
                     screen2El.style.display = 'none';
                     screen2El.setAttribute('aria-hidden', 'true');
-                    screen2El.classList.remove('active');
                 }
                 if (screen1El) {
                     screen1El.removeAttribute('aria-hidden');
@@ -1115,7 +1112,6 @@
                     if (window.getComputedStyle(screen1El).display === 'none') {
                         screen1El.style.display = 'block';
                     }
-                    screen1El.classList.add('active');
                 }
             }
         }
@@ -2176,6 +2172,14 @@
                 updateMapToggleVisibility();
             }
             
+            // Mostrar/ocultar recomendaciones según pestaña activa
+            toggleRecommendations(currentTab);
+            
+            // Re-renderizar carrusel con dataset correcto al cambiar tab
+            recPage = 1; // Resetear a primera página
+            if (typeof renderCarousel === 'function') {
+                renderCarousel();
+            }
         }
 
         // Event listeners para tabs desktop
@@ -2239,6 +2243,281 @@
             });
         }
 
+        // ═══════════════════════════════════════════════════════
+        // MOSTRAR/OCULTAR RECOMENDACIONES
+        // ═══════════════════════════════════════════════════════
+        function toggleRecommendations(tab) {
+            // El carrusel debe ser SIEMPRE visible, sin importar el tab
+            const recommendationsSection = document.getElementById('recommendationsSection');
+            if (recommendationsSection) {
+                recommendationsSection.classList.add('visible');
+            }
+        }
+
+        // Inicializar recomendaciones visibles si la pestaña activa es "todo"
+        if (currentTab === 'todo') {
+            const recSection = document.getElementById('recommendationsSection');
+            if (recSection) {
+                recSection.classList.add('visible');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // CARRUSEL 3D DE FICHAS
+        // ═══════════════════════════════════════════════════════
+        
+        const carouselCards = Array.from(document.querySelectorAll('.carousel-card'));
+        const carouselStack = document.getElementById('carouselStack');
+
+        const stepXBase = 120;
+        const stepY = 14;
+        const stepScale = 0.12;
+        const stepRotate = 6;
+        const depthStep = 200;
+
+        let currentCarousel = 0;
+        const totalCarousel = carouselCards.length;
+
+        const opacityByLevel = {
+            0: 1,
+            1: 0.7,
+            2: 0.5,
+            3: 0.2
+        };
+
+        function normalizeCarousel(index) {
+            return (index + totalCarousel) % totalCarousel;
+        }
+
+        const carouselControls = document.createElement('div');
+        carouselControls.className = 'carousel-card-controls';
+        carouselControls.innerHTML = `
+            <button class="carousel-nav-btn carousel-prev" aria-label="Anterior">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
+            </button>
+            <button class="carousel-nav-btn carousel-next" aria-label="Siguiente">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
+            </button>
+        `;
+
+        function renderCarousel3D() {
+            if (!carouselStack) return;
+
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            const carouselFrame = carouselStack.closest('.carousel-3d') || carouselStack.parentElement;
+            const carouselColumn = carouselStack.closest('.carousel-column');
+
+            const txFactors = isMobile ? [1, 1.4, 1.75] : [1, 1.6, 2.1];
+            const scaleFactors = isMobile ? [0.92, 0.84, 0.76] : [0.82, 0.7, 0.62];
+            const opacityByLevelRender = isMobile
+                ? { 0: 1, 1: 0.85, 2: 0.7, 3: 0.5 }
+                : opacityByLevel;
+
+            const getCarouselGutter = () => {
+                if (!carouselColumn) return 16;
+                const gutterValue = getComputedStyle(carouselColumn).getPropertyValue('--carousel-gutter');
+                const parsed = parseFloat(gutterValue);
+                return Number.isFinite(parsed) ? parsed : 16;
+            };
+
+            const computeMobileFit = () => {
+                const frameW = carouselFrame ? carouselFrame.getBoundingClientRect().width : window.innerWidth;
+                const gutter = getCarouselGutter();
+                const usableW = Math.max(0, frameW - (2 * gutter));
+                const cardRect = carouselCards[0] ? carouselCards[0].getBoundingClientRect() : null;
+                const cardW = (cardRect && cardRect.width) || parseFloat(getComputedStyle(carouselStack).width) || 280;
+
+                const targetHalf = Math.max(0, (usableW / 2) - 10);
+
+                let stepXMobileMax = stepXBase;
+                txFactors.forEach((factor, idx) => {
+                    const limit = (targetHalf - (cardW * scaleFactors[idx] / 2)) / factor;
+                    if (Number.isFinite(limit)) {
+                        stepXMobileMax = Math.min(stepXMobileMax, limit);
+                    }
+                });
+
+                let stepXMobile = Math.min(stepXBase, stepXMobileMax);
+                stepXMobile = Math.max(stepXMobile, 64);
+
+                const maxHalfExtent = Math.max(
+                    ...txFactors.map((factor, idx) => Math.abs(factor * stepXMobile) + (cardW * scaleFactors[idx] / 2))
+                );
+
+                let scaleFit = 1;
+                if (maxHalfExtent > 0 && targetHalf > 0) {
+                    scaleFit = Math.min(1, targetHalf / maxHalfExtent);
+                }
+                scaleFit = Math.max(scaleFit, 0.8);
+
+                return { stepXMobile, scaleFit, gutter };
+            };
+
+            let stepXRender = stepXBase;
+            let scaleFit = 1;
+            let gutter = 0;
+
+            if (isMobile) {
+                const fit = computeMobileFit();
+                stepXRender = fit.stepXMobile;
+                scaleFit = fit.scaleFit;
+                gutter = fit.gutter;
+            }
+
+            const renderWith = (stepXValue, scaleValue) => {
+                if (isMobile) {
+                    carouselStack.style.transformOrigin = 'center center';
+                    carouselStack.style.transform = `scale(${scaleValue})`;
+                } else {
+                    carouselStack.style.transform = 'none';
+                }
+
+                carouselCards.forEach((card, index) => {
+                    const offset = (index - currentCarousel + totalCarousel) % totalCarousel;
+                    const signed = offset > totalCarousel / 2 ? offset - totalCarousel : offset;
+                    const abs = Math.abs(signed);
+                    const dir = Math.sign(signed);
+
+                    let tx = 0;
+                    let ty = 0;
+                    let tz = 0;
+                    let scale = 1;
+                    let rotate = 0;
+                    let opacity = 1;
+                    let zIndex = 6;
+
+                    if (abs === 0) {
+                        card.classList.add('is-active');
+                        zIndex = 6;
+                    } else if (abs === 1) {
+                        card.classList.remove('is-active');
+                        tx = stepXValue * txFactors[0] * dir;
+                        ty = stepY;
+                        tz = -depthStep;
+                        scale = scaleFactors[0];
+                        rotate = stepRotate * dir;
+                        opacity = opacityByLevelRender[1];
+                        zIndex = 4;
+                    } else if (abs === 2) {
+                        card.classList.remove('is-active');
+                        tx = stepXValue * txFactors[1] * dir;
+                        ty = stepY * 2;
+                        tz = -depthStep * 1.6;
+                        scale = scaleFactors[1];
+                        rotate = stepRotate * 1.6 * dir;
+                        opacity = opacityByLevelRender[2];
+                        zIndex = 2;
+                    } else {
+                        card.classList.remove('is-active');
+                        tx = stepXValue * txFactors[2] * dir;
+                        ty = stepY * 2.6;
+                        tz = -depthStep * 2.1;
+                        scale = scaleFactors[2];
+                        rotate = stepRotate * 2 * dir;
+                        opacity = opacityByLevelRender[3];
+                        zIndex = 1;
+                    }
+
+                    card.style.transform = `translate(-50%, -50%) translateX(${tx}px) translateY(${ty}px) translateZ(${tz}px) scale(${scale}) rotate(${rotate}deg)`;
+                    card.style.opacity = opacity;
+                    card.style.zIndex = zIndex;
+                    card.style.filter = abs === 0 ? 'none' : 'brightness(0.95)';
+                });
+            };
+
+            const attempts = isMobile ? 3 : 1;
+            for (let i = 0; i < attempts; i++) {
+                renderWith(stepXRender, scaleFit);
+
+                if (!isMobile || !carouselFrame) break;
+                const frameRect = carouselFrame.getBoundingClientRect();
+                const stackRect = carouselStack.getBoundingClientRect();
+                const leftLimit = frameRect.left + gutter;
+                const rightLimit = frameRect.right - gutter;
+
+                if (stackRect.left >= leftLimit && stackRect.right <= rightLimit) break;
+
+                scaleFit = Math.max(0.8, scaleFit - 0.03);
+                stepXRender = Math.max(64, stepXRender * 0.94);
+            }
+
+            const activeCard = carouselCards[currentCarousel];
+            if (activeCard && !activeCard.contains(carouselControls)) {
+                activeCard.appendChild(carouselControls);
+            }
+
+            // Actualizar dots y contador
+            const dots = document.querySelectorAll('.carousel-dot');
+            dots.forEach((dot, index) => {
+                if (index === currentCarousel) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+
+            const counter = document.getElementById('carouselCounter');
+            if (counter) {
+                counter.textContent = `${currentCarousel + 1} de ${totalCarousel}`;
+            }
+        }
+
+        function goToCarousel(index) {
+            currentCarousel = normalizeCarousel(index);
+            renderCarousel3D();
+        }
+
+        carouselControls.addEventListener('click', (e) => {
+            const btn = e.target.closest('.carousel-nav-btn');
+            if (!btn) return;
+            if (btn.classList.contains('carousel-prev')) goToCarousel(currentCarousel - 1);
+            if (btn.classList.contains('carousel-next')) goToCarousel(currentCarousel + 1);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') goToCarousel(currentCarousel - 1);
+            if (e.key === 'ArrowRight') goToCarousel(currentCarousel + 1);
+        });
+
+        let carouselStartX = 0;
+        let carouselStartY = 0;
+        let carouselSwiping = false;
+
+        if (carouselStack) {
+            carouselStack.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                carouselStartX = touch.clientX;
+                carouselStartY = touch.clientY;
+                carouselSwiping = false;
+            }, { passive: true });
+
+            carouselStack.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                const dx = touch.clientX - carouselStartX;
+                const dy = touch.clientY - carouselStartY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
+                    carouselSwiping = true;
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            carouselStack.addEventListener('touchend', (e) => {
+                if (!carouselSwiping) return;
+                const touch = e.changedTouches[0];
+                const dx = touch.clientX - carouselStartX;
+                if (dx < -30) goToCarousel(currentCarousel + 1);
+                if (dx > 30) goToCarousel(currentCarousel - 1);
+            });
+        }
+
+        // Click en dots para navegar
+        document.addEventListener('click', (e) => {
+            const dot = e.target.closest('.carousel-dot');
+            if (dot) {
+                const index = parseInt(dot.dataset.index, 10);
+                goToCarousel(index);
+            }
+        });
 
         // Event listener para botón "Volver a buscar"
         if (btnBackSearch) {
@@ -2246,6 +2525,8 @@
                 resetSearchUI();
             });
         }
+
+        renderCarousel3D();
 
         // ═══════════════════════════════════════════════════════
         // CHIP DE BÚSQUEDA CONFIRMADA - BOTÓN CERRAR
@@ -3392,17 +3673,9 @@
         });
 
         function setScrollLock(locked) {
-            if (locked) {
-                document.body.style.position = 'fixed';
-                document.body.style.width = '100%';
-                document.body.style.top = `-${window.scrollY}px`;
-            } else {
-                const scrollY = document.body.style.top;
-                document.body.style.position = '';
-                document.body.style.width = '';
-                document.body.style.top = '';
-                window.scrollTo(0, parseInt(scrollY || '0') * -1);
-            }
+            const overflowValue = locked ? 'hidden' : '';
+            document.documentElement.style.overflow = overflowValue;
+            document.body.style.overflow = overflowValue;
         }
 
         const DEBUG_SCROLL = false;
@@ -3632,170 +3905,3 @@
             handleScroll();
         })();
         }
-
-/* ═══════════════════════════════════════════════════════════════════════
-    CARRUSEL 3D DE RECOMENDACIONES — Motor de navegación
-    ═══════════════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', function () {
-     'use strict';
-
-    var stack = document.getElementById('carouselStack');
-    if (!stack) return; // Si no hay carrusel en la página, salir
-
-    var cards = Array.from(stack.querySelectorAll('.carousel-card'));
-    var dotsContainer = document.getElementById('carouselDots');
-    var dots = dotsContainer ? Array.from(dotsContainer.querySelectorAll('.carousel-dot')) : [];
-    var counterEl = document.getElementById('carouselCounter');
-
-    var total = cards.length;
-    if (total === 0) return;
-
-    var current = 0;
-
-    // Parámetros de distribución 3D
-    var stepX = 180;
-    var stepY = 14;
-    var stepRotate = 6;
-    var depthStep = 200;
-
-    var opacityByLevel = { 0: 1, 1: 0.7, 2: 0.5, 3: 0.2 };
-
-    function normalize(index) {
-        return ((index % total) + total) % total;
-    }
-
-    // Controles existentes en el HTML
-    var prevBtn = document.querySelector('.carousel-prev');
-    var nextBtn = document.querySelector('.carousel-next');
-
-    // Render: posicionar todas las cards
-    function render() {
-        cards.forEach(function (card, index) {
-            var offset = (index - current + total) % total;
-            var signed = offset > total / 2 ? offset - total : offset;
-            var abs = Math.abs(signed);
-            var dir = signed > 0 ? 1 : signed < 0 ? -1 : 0;
-
-            var tx = 0, ty = 0, tz = 0, scale = 1, rotate = 0, opacity = 1, zIndex = 6;
-
-            if (abs === 0) {
-                card.classList.add('is-active');
-                zIndex = 6;
-            } else if (abs === 1) {
-                card.classList.remove('is-active');
-                tx = stepX * dir;
-                ty = stepY;
-                tz = -depthStep;
-                scale = 0.82;
-                rotate = stepRotate * dir;
-                opacity = opacityByLevel[1];
-                zIndex = 4;
-            } else if (abs === 2) {
-                card.classList.remove('is-active');
-                tx = stepX * 1.6 * dir;
-                ty = stepY * 2;
-                tz = -depthStep * 1.6;
-                scale = 0.7;
-                rotate = stepRotate * 1.6 * dir;
-                opacity = opacityByLevel[2];
-                zIndex = 2;
-            } else {
-                card.classList.remove('is-active');
-                tx = stepX * 2.1 * dir;
-                ty = stepY * 2.6;
-                tz = -depthStep * 2.1;
-                scale = 0.62;
-                rotate = stepRotate * 2 * dir;
-                opacity = opacityByLevel[3];
-                zIndex = 1;
-            }
-
-            card.style.transform = 'translate(-50%, -50%) translateX(' + tx + 'px) translateY(' + ty + 'px) translateZ(' + tz + 'px) scale(' + scale + ') rotate(' + rotate + 'deg)';
-            card.style.opacity = opacity;
-            card.style.zIndex = zIndex;
-            card.style.filter = abs === 0 ? 'none' : 'brightness(0.95)';
-        });
-
-        // Actualizar dots
-        dots.forEach(function (dot, i) {
-            dot.classList.toggle('active', i === current);
-        });
-
-        // Actualizar contador
-        if (counterEl) {
-            counterEl.textContent = (current + 1) + ' de ' + total;
-        }
-    }
-
-    function goTo(index) {
-        current = normalize(index);
-        render();
-    }
-
-    // Click en flechas
-    if (prevBtn) {
-        prevBtn.addEventListener('click', function () {
-            goTo(current - 1);
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function () {
-            goTo(current + 1);
-        });
-    }
-
-    // Click en dots
-    if (dotsContainer) {
-        dotsContainer.addEventListener('click', function (e) {
-            var dot = e.target.closest('.carousel-dot');
-            if (!dot) return;
-            var idx = parseInt(dot.getAttribute('data-index'), 10);
-            if (!isNaN(idx)) goTo(idx);
-        });
-    }
-
-    // Teclado (solo si el carrusel está visible)
-    document.addEventListener('keydown', function (e) {
-        var section = document.getElementById('screen1');
-        if (section && section.style.display === 'none') return;
-        if (e.key === 'ArrowLeft') goTo(current - 1);
-        if (e.key === 'ArrowRight') goTo(current + 1);
-    });
-
-    // Swipe táctil
-    var startX = 0;
-    var startY = 0;
-    var isSwiping = false;
-
-    stack.addEventListener('touchstart', function (e) {
-        var touch = e.touches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-        isSwiping = false;
-    }, { passive: true });
-
-    stack.addEventListener('touchmove', function (e) {
-        var touch = e.touches[0];
-        var dx = touch.clientX - startX;
-        var dy = touch.clientY - startY;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
-            isSwiping = true;
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    stack.addEventListener('touchend', function (e) {
-        if (!isSwiping) return;
-        var touch = e.changedTouches[0];
-        var dx = touch.clientX - startX;
-        if (dx < -30) goTo(current + 1);
-        if (dx > 30) goTo(current - 1);
-    });
-
-    // Re-render en resize
-    window.addEventListener('resize', render);
-
-    // Primer render
-    render();
-});
