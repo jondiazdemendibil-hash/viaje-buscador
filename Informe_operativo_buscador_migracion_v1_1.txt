@@ -1,0 +1,193 @@
+Informe operativo — Buscador (Screen 1/2) y migración a PHP
+Especificación funcional + decisiones cerradas (v1.1)
+
+Fecha: 16/02/2026  ·  Versión: v1.1
+
+Ámbito: WordPress + Avada (XAMPP). Este documento fija decisiones de UX/UI y reglas técnicas v1 para ejecutar la migración sin improvisación.
+
+
+1. Contexto y objetivo
+Objetivo: diseñar y cerrar la lógica de resultados del buscador (Tabs) y dejar un plan operativo para migrar el borrador HTML a una plantilla PHP en WordPress/Avada, manteniendo el diseño y evitando roturas.
+* Screen 1: búsqueda (tabs, inputs, recomendaciones).
+* Screen 2: resultados + mapa.
+* Botón de salida rápida: “Volver a Buscar” (vuelve a Screen 1 limpio).
+Principio rector: no saturar de fichas. Para facetas/experiencias/items, salida máxima de 12 fichas. Para listas de días, scroll infinito (chunks) con ayudas de navegación, sin separadores ni headers adicionales.
+2. Diseño de resultados por Tabs (Screen 2)
+Convención general de ficha (v1): Título + Línea 1 + Línea 2. En móvil, priorizar claridad y evitar densidad excesiva.
+Convención general de orden: cronológico del viaje (ascendente).
+2.1 Tab FECHA (sin OpenAI)
+2.1.1 Selector de fechas (Screen 1)
+* Permite seleccionar un día (desde = hasta) o un rango.
+* Validación mínima: fecha_desde <= fecha_hasta.
+2.1.2 Resultados (Screen 2)
+Ficha día (resultado estándar):
+* Título: fecha_dia
+* Línea 1: sitio_dia
+* Línea 2: hito_dia
+Comportamiento:
+* Resultados en orden cronológico (ascendente).
+* Scroll infinito por chunks para rangos largos.
+* La barra de título puede mostrar el rango seleccionado y el número de días; las migas y el contador de fichas se mantienen como están (sin añadir elementos nuevos).
+2.1.3 Contexto de tramos por solape (automático, v1)
+Regla: calcular overlapping_tramos = tramos cuyo rango solapa el rango seleccionado.
+* N=0: no mostrar tramos.
+* N=1: mostrar siempre micro-contexto “En el tramo: {nombre_tramo}” (clicable a single-tramo-custom.php). Ficha completa del tramo solo si el solape es significativo (p. ej., el rango cubre >=50% del rango o >=30% del tramo). En móvil, por defecto colapsado.
+* N=2: micro-contexto “Tramos: A, B”; (desktop) hasta 2 fichas; (móvil) resumen colapsado.
+* N>=3: solo resumen “Tramos (N)” (clicable). No listar fichas completas en FECHA.
+2.2 Tab LUGAR (sin OpenAI)
+2.2.1 Entrada (Screen 1)
+* Dropdown/autocomplete por lugares existentes (CPT/ACF).
+* Tolerancia: tildes y mayúsculas mediante normalización. Typos: alias + fuzzy matching (sin OpenAI).
+2.2.2 Resultados cuando el lugar existe (Screen 2)
+* Barra de título: “Lugar: {sitio}”.
+* Si hay 1 estancia: mostrar días (ficha estándar de FECHA).
+* Si hay 2+ estancias: mostrar fichas de periodos/estancias. Al seleccionar un periodo, mostrar los días de ese periodo.
+2.2.3 Resultados cuando el lugar NO existe (Screen 2)
+Texto fijo (sin tocar migas ni contador): “Lo sentimos, no encontramos {lugar_buscado}, pero sí estos lugares cercanos”.
+Ofrecer 4 alternativas cercanas (Google Maps / proximidad):
+* Ficha alternativa:
+* Título: sitio_dia (lugar sugerido)
+* Línea 1: ~{km} km (distancia aproximada)
+* Sin Línea 2 (evitar ambigüedad por múltiples estancias).
+Al clicar una alternativa: re-ejecutar el flujo normal del tab LUGAR para ese sitio (1 estancia -> días; 2+ estancias -> periodos -> días).
+2.3 Tab ACTIVIDAD (con OpenAI)
+2.3.0 Barra de título (Screen 2) — una sola línea
+Regla: mostrar qué entendió el sistema y qué se está filtrando en una sola línea. Si no coincide, el usuario usa “Volver a Buscar”.
+* Formato: “Actividad: {interpretación} · {ruta_de_filtros} · {nivel}” (solo lo que aplique).
+2.3.1 Determinación de target_entity (v1)
+* Familias macro (crucero/safari/polar/tren de lujo, etc.) -> target_entity = experiencia (tramo).
+* Búsqueda específica (nombre/actividad clara) -> target_entity = item (actividad).
+* Genéricos masivos (spa/museos/wellness/compras, etc.) -> target_entity = facet (refinado) y, cuando sea manejable, item.
+2.3.2 Ficha de experiencia (crucero/safari/expedición)
+* Título: nombre de la experiencia (si existe) o Crucero/Safari/Polar + etiqueta corta.
+* Línea 1: fecha_desde – fecha_hasta
+* Línea 2: Sitio_inicio -> Sitio_fin (+N)
+2.3.3 Ficha item (actividad)
+* Título: titulo_actividad
+* Línea 1: sitio_dia
+* Línea 2: fecha_dia
+Ordenación de items: fecha_dia ascendente; si hay varios items el mismo día, ordenar por orden_dia ascendente.
+2.3.4 Árboles mínimos (v1) para familias macro
+* Cruceros: Marítimos / Fluviales (opcional: Expedición). Marítimos -> Mares/Océanos. Fluviales -> Continentes.
+* Polar: Ártico / Antártida (y subregión solo si hace falta).
+* Safari: Continentes -> País (solo si el continente aún devuelve demasiadas experiencias).
+2.3.5 Genéricos masivos (spa/museos/...) — flujo cerrado (v1)
+* Primera respuesta siempre <=12 fichas (modo facetas).
+* Refinado por geografía como ruta principal: Continentes -> Países -> Lugares.
+* Saltos automáticos de nivel si un nivel solo tiene 1 opción.
+* Si el usuario ya incluye lugar en la query (p. ej. “spa París”): saltar al nivel más cercano y continuar.
+* Paso final: mostrar items (ficha titulo_actividad / sitio_dia / fecha_dia).
+* Si aún quedan demasiados items en un mismo lugar (caso raro): insertar faceta temporal ligera por estancias/periodos del lugar y, tras elegir periodo, mostrar items.
+2.3.6 Límites y fallback
+* Sin badges adicionales: la claridad se consigue con titulo_actividad + sitio_dia + fecha_dia.
+* Si OpenAI falla o baja confianza: fallback a búsqueda literal + facetas deterministas (manteniendo <=12).
+2.4 Tab TODO (con OpenAI)
+2.4.0 Barra de título (Screen 2) — una sola línea
+* Formato: “Todo: {interpretación} · {target} · {ruta_de_filtros} · {nivel}” (solo lo que aplique).
+2.4.1 Regla general
+TODO amplía ACTIVIDAD y además resuelve búsquedas cruzadas (atributos + lugar/tiempo) y consultas tipo pregunta. El Intérprete decide target_entity; la ejecución es determinista.
+2.4.2 Guardarraíles (obligatorios)
+* Target obligatorio: facet / experiencia / item / dia. Prohibido mezclar listas.
+* Combinación por defecto: AND. OR solo si el usuario lo expresa explícitamente.
+* Scope: los filtros se aplican al mismo target (no crean listados paralelos).
+* Límite: si target in {facet, experiencia, item} -> <=12 fichas. Días -> scroll infinito.
+* Consultas tipo pregunta (intent=question):
+* ¿Dónde dormimos …? -> item:hospedaje
+* ¿Dónde cenamos …? -> item:restaurante
+* ¿Qué hicimos …? -> item:actividad (o día si es muy amplio)
+* Proximidad: soportar “cerca de {lugar}” solo si {lugar} existe en los sitios del viaje (coords). Si no existe, aplicar flujo LUGAR no existe. No soportar en v1 “cerca del hotel/donde dormimos” en el buscador global.
+2.4.3 Unidades de resultado (v1)
+Items (restaurante/hospedaje/actividad) en Screen 2:
+* Restaurante: Título = nombre_restaurante + tipo_comida (entre paréntesis, en cursiva y menor prominencia si es posible). Línea 1 = sitio_dia. Línea 2 = fecha_dia.
+* Orden restaurantes: fecha_dia ascendente; luego tipo_comida (desayuno -> almuerzo -> cena); luego orden_dia ascendente.
+* Hospedaje: Título = nombre_hospedaje. Línea 1 = sitio_dia. Línea 2 = fecha_dia. Orden cronológico.
+* Experiencia: ficha de experiencia (tramo) según 2.3.2.
+* Día: ficha estándar de FECHA.
+2.4.4 Ejemplos de búsqueda cruzada (v1)
+* “Cruceros en Navidad”: target=experiencia; filtro temporal por solape fecha_desde-fecha_hasta con Navidad.
+* “Restaurantes Michelin en Grecia”: target=item:restaurante; filtro atributo=Michelin + lugar=Grecia; si demasiados, facetas geográficas.
+* “Tren de lujo en China”: target=experiencia; lugar=China.
+3. Contrato del Intérprete (OpenAI) — reglas no negociables (v1)
+La IA traduce lo que escribe el usuario a un plan (SearchPlan). El sistema ejecuta el plan con datos reales.
+* La IA solo interpreta, no busca: produce intención, filtros y siguiente paso (facetas o resultados).
+* Una sola unidad objetivo (target) por consulta: facet / experiencia / item / dia.
+* Límites: <=12 fichas para facet/experiencia/item. Días: scroll infinito por chunks (per_page=21).
+* AND por defecto. Cada filtro declara su scope y filtra el mismo target.
+* Si duda o falla: fallback a facetas deterministas o búsqueda literal. Nunca pantalla vacía.
+* Barra de título siempre honesta (una línea).
+* Encaje por tabs: FECHA/LUGAR sin OpenAI; ACTIVIDAD/TODO usan OpenAI solo para interpretación.
+4. Recomendación operativa — usar Claude Opus 4.6 para migrar sin romper nada (v1)
+* Un objetivo por parche (máximo 1 cambio funcional + 1 limpieza asociada).
+* Prohibido tocar lo no nombrado: delimitar qué archivos/zonas puede modificar.
+* Salida siempre como diff/parche + checklist de verificación (antes/después).
+* No mezclar refactors con migración: CSS/JS en parches dedicados.
+* Rollback fácil: cada parche debe ser reversible sin efectos colaterales.
+5. Ejecución de la migración (HTML -> PHP) en pasos pequeños (v1)
+5.0 Preparación
+* Crear baseline (tag/snapshot) del estado actual.
+* Definir plantilla destino en Avada child (p. ej. page-buscador.php o equivalente).
+* Confirmar referencia visual: Screen 1/2 funcionan en HTML.
+5.1 Paso 1 — Portado 1:1 (markup)
+* Copiar el HTML al esqueleto PHP sin lógica, manteniendo DOM/clases/IDs.
+* Verificación: pantalla idéntica (sin datos dinámicos).
+5.2 Paso 2 — Externalizar assets de forma segura
+* Mover CSS/JS a archivos encolados (enqueue) sin cambiar selectores.
+* Verificación: 0 cambios visuales, 0 errores en consola.
+5.3 Paso 3 — Datos mock controlados
+* Sustituir hardcode por un mock centralizado (no duplicar).
+* Verificación: UI estable, aún independiente de WP.
+5.4 Paso 4 — Conectar datos reales (lectura)
+* Conectar ACF/CPT: días, actividades, restaurantes, hospedajes, tramos.
+* Verificación: un caso real por tab sin romper.
+5.5 Paso 5 — Endpoints (REST) y paginación
+* Implementar /suggest y /search (contrato v1).
+* Verificación: límites respetados (<=12 / 21 días) y scroll infinito estable.
+5.6 Paso 6 — Integración OpenAI (solo interpretación)
+* Implementar SearchPlan server-side con cache + rate limit + fallback.
+* Verificación: búsquedas cruzadas no mezclan listas; preguntas resuelven a hospedajes/restaurantes cuando proceda.
+5.7 Paso 7 — Mapa por estados
+* Implementar comportamiento del mapa según 8.2.1.
+* Verificación: pin único por sitio, sin mareos; estados correctos.
+5.8 Paso 8 — Deep links por ID
+* Implementar URLs canónicas por id_actividad/id_restaurante/id_hospedaje con fallback seguro al día.
+* Verificación: todos los clicks llegan al contenido correcto.
+5.9 Paso 9 — QA final
+* Ejecutar matriz 8.2.8 completa. Si falla una misión, se corrige antes de avanzar.
+8. Decisiones cerradas y ejecución (v1)
+8.1 Resuelto
+* Tabs cerrados: FECHA, LUGAR, ACTIVIDAD, TODO.
+* Typos/tildes/mayúsculas sin OpenAI (normalización + alias + fuzzy + UX “Mostrando resultados para…”).
+* LUGAR no existe: texto + 4 alternativas cercanas.
+8.2 Decisiones técnicas cerradas
+8.2.1 Mapa por estado (cerrado)
+* Día: 1 pin por sitio_dia; no re-centrar si no cambia sitio; pan suave + zoom constante si cambia; opcional badge xN cuando varias fichas visibles comparten sitio.
+* Periodo/Visita: 1 pin del lugar del periodo; sin rutas.
+* Experiencia (tramo): 2 pins inicio/fin + fit bounds; sin rutas.
+* Facetas geográficas: no mover mapa hasta que el usuario elija algo concreto.
+* No-results/sugerencias: si hay 4 sugerencias, 4 pins + fit bounds; si no, sin cambios.
+8.2.2 Experiencia = tramo (cerrado)
+* Fuente de verdad: tramos.csv / CPT tramo.
+* Campos: id_tramo, nombre_tramo (fallback Tramo {id}), fecha_inicio/fin, sitio_inicio/fin.
+8.2.3 Coincidencia semántica en títulos (cerrado)
+* Para búsquedas por tema en ACTIVIDAD/TODO, preferir items cuando existan (titulo_actividad / sitio_dia / fecha_dia).
+* Genéricos masivos: facetas geográficas hasta <=12, luego items; fallback a día solo si no hay items claros.
+8.2.4 Deep links por ID (cerrado)
+* URLs canónicas por id_actividad/id_restaurante/id_hospedaje desde ya.
+* Si no existe plantilla dedicada, fallback seguro al día (con ancla si se puede) o placeholder mínimo.
+8.2.5 API/Endpoint y paginación (cerrado)
+* WordPress REST API versionada (no admin-ajax).
+* Endpoints mínimos: /search (resultados + facetas + mapa), /suggest (autocomplete).
+* Límites: <=12 para facetas/experiencias/items; per_page=21 para días.
+8.2.6 OpenAI en producción (cerrado)
+* Solo interpretación (SearchPlan) en TODO/ACTIVIDAD.
+* Key solo servidor. Cache (TTL recomendado 24h). Rate limit por usuario. Batch/offline para facetas/temas. Fallback determinista.
+8.2.7 Rendimiento (cerrado)
+* Virtualización de lista obligatoria. Paginación por chunks. Mapa con debounce/throttle. Imágenes lazy-load.
+8.2.8 QA de regresión (cerrado)
+Misiones mínimas (examen final):
+* M1 FECHA 1 día; M2 FECHA 7 días; M3 FECHA 30 días; M4 FECHA 180 días.
+* M5 LUGAR existe (1 estancia); M6 LUGAR existe (2+ estancias); M7 LUGAR no existe (4 sugerencias).
+* M8 ACTIVIDAD crucero; M9 ACTIVIDAD spa/museos; M10 TODO cruzado (Navidad/Michelin/China).
+Reglas de aprobado: 0 errores rojos en consola; nunca pantalla vacía; <=12 donde toca; listas de días con scroll fluido; mapa estable con 1 pin por sitio_dia.
+8.3 Ejecución con control
+* Migración por parches pequeños + checklist + QA por paso. Si un test falla, se corrige antes de avanzar.
