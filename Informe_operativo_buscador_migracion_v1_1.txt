@@ -29,12 +29,15 @@ Comportamiento:
 * Resultados en orden cronológico (ascendente).
 * Scroll infinito por chunks para rangos largos.
 * La barra de título puede mostrar el rango seleccionado y el número de días; las migas y el contador de fichas se mantienen como están (sin añadir elementos nuevos).
-2.1.3 Contexto de tramos por solape (automático, v1)
+2.1.3 Contexto de tramos por solape (v1 simplificado)
+FECHA v1: micro-contexto de tramo (solo texto) calculado por solape, sin umbrales ni fichas de tramo.
 Regla: calcular overlapping_tramos = tramos cuyo rango solapa el rango seleccionado.
-* N=0: no mostrar tramos.
-* N=1: mostrar siempre micro-contexto "En el tramo: {nombre_tramo}" (clicable a single-tramo-custom.php). Ficha completa del tramo solo si el solape es significativo (p. ej., el rango cubre >=50% del rango o >=30% del tramo). En móvil, por defecto colapsado.
-* N=2: micro-contexto "Tramos: A, B"; (desktop) hasta 2 fichas; (móvil) resumen colapsado.
-* N>=3: solo resumen "Tramos (N)" (clicable). No listar fichas completas en FECHA.
+* N=0: no mostrar nada.
+* N=1: "En el tramo: {nombre_tramo}" (clicable a single-tramo-custom.php).
+* N=2: "Tramos: {A}, {B}" (cada nombre clicable).
+* N>=3: "Tramos: {A} (+N)" (clicable a lista o resumen).
+Sin fichas de tramo en FECHA. Si el usuario quiere explorar tramos, lo hace por ACTIVIDAD/TODO (crucero/safari/tren/polar) o por navegación dedicada (Cesium/Timeline).
+FECHA v2 (opcional, fuera de alcance v1): fichas de tramo y lógica de relevancia por solape si algún día se quiere enriquecer esta vista.
 2.2 Tab LUGAR (sin OpenAI)
 2.2.1 Entrada (Screen 1)
 * Dropdown/autocomplete por lugares existentes (CPT/ACF).
@@ -79,7 +82,7 @@ Ordenación de items: fecha_dia ascendente; si hay varios items el mismo día, o
 * Si el usuario ya incluye lugar en la query (p. ej. "spa París"): saltar al nivel más cercano y continuar.
 * Paso final: mostrar items (ficha titulo_actividad / sitio_dia / fecha_dia).
 * Si aún quedan demasiados items en un mismo lugar (caso raro): insertar faceta temporal ligera por estancias/periodos del lugar y, tras elegir periodo, mostrar items.
-2.3.6 Límites y fallback
+* 2.3.6 Límites y fallback
 * Sin badges adicionales: la claridad se consigue con titulo_actividad + sitio_dia + fecha_dia.
 * Si OpenAI falla o baja confianza: fallback a búsqueda literal + facetas deterministas (manteniendo <=12).
 2.4 Tab TODO (con OpenAI)
