@@ -51,14 +51,99 @@ Ficha de estancia (campos calculados desde DÍA):
 * Barra de título: "Lugar: {sitio}".
 * Si hay 1 estancia: mostrar días directamente (ficha estándar de FECHA).
 * Si hay 2+ estancias: mostrar fichas de estancias. Al seleccionar una estancia, mostrar los días de ese bloque.
-2.2.3 Resultados cuando el lugar NO existe (Screen 2)
-Texto fijo (sin tocar migas ni contador): "Lo sentimos, no encontramos {lugar_buscado}, pero sí estos lugares cercanos".
-Ofrecer 4 alternativas cercanas (Google Maps / proximidad):
-* Ficha alternativa:
-* Título: sitio_dia (lugar sugerido)
-* Línea 1: ~{km} km (distancia aproximada)
-* Sin Línea 2 (evitar ambigüedad por múltiples estancias).
-Al clicar una alternativa: re-ejecutar el flujo normal del tab LUGAR para ese sitio (1 estancia -> días; 2+ estancias -> estancias -> días).
+2.2.3 Tab LUGAR — lugar no encontrado y alternativas cercanas (v1)
+Disparador (único): el usuario ejecuta la búsqueda (Enter o botón) con texto libre en LUGAR y el dropdown/autocomplete queda en blanco (no hay coincidencia exacta en los sitios de la web).
+Flujo v1 (prioridad y comportamiento)
+Paso 1 — Respetar el término del usuario (siempre).
+Se conserva el texto tal cual lo escribió (p. ej. "Berna") como query_original.
+La UI no "corrige" al usuario por defecto.
+Paso 2 — Alias (solo si es inequívoco).
+Si query_original coincide con un alias inequívoco del diccionario (ej. "Barna" → "Barcelona"), se resuelve internamente al canónico:
+Barra de Título (Screen 2, 1 línea): Lugar: Barna → Barcelona
+Se muestran resultados normales del lugar canónico (estancias → días).
+Si no hay alias inequívoco, continuar.
+Paso 3 — Google Geocoding + cercanos reales (modo "no lo tengo").
+Se llama a Google Geocoding con query_original para obtener coordenadas aproximadas del lugar buscado.
+Con esas coordenadas, se calculan distancias contra todos los sitios propios (que ya tienen lat/lng) y se seleccionan los 4 más cercanos.
+UI obligatoria (Screen 2):
+Barra de Título (1 línea, sin subtítulos): Lo siento, no tengo: {query_original}
+Texto breve en el área de resultados (no en la barra): Pero cerca de "{query_original}" sí tengo:
+4 fichas de alternativas (sin más resultados):
+* Título: sitio_dia (formato canónico "Ciudad, País")
+* Línea 1: ~{km} km de "{query_original}"
+* Línea 2: (vacía / no se usa)
+Acción al clicar una alternativa:
+Se ejecuta el flujo normal de LUGAR para ese sitio:
+* Si el sitio tiene 2+ estancias → mostrar fichas de estancias, y después días.
+* Si tiene 1 estancia → mostrar directamente los días (fichas día: fecha_dia / sitio_dia / hito_dia).
+Paso 4 — Fallback si Google falla (cuota/timeout/vacío).
+Mantener la misma barra: Lo siento, no tengo: {query_original}
+Mostrar mensaje: Ahora mismo no puedo calcular lugares cercanos. ¿Querías decir…?
+Mostrar 4 sugerencias por similitud de nombre (fuzzy), sin km y sin prometer cercanía:
+* Título: sitio_dia
+* Línea 1: (vacía o país si ya va en canónico)
+* Línea 2: (vacía)
+Notas técnicas v1 (mínimas)
+* Google solo se usa en el caso "búsqueda ejecutada sin match en dropdown".
+* Recomendado: cache por query_original normalizada (minúsculas + trim) para reducir latencia y llamadas repetidas.
+Diccionario de alias (Tab LUGAR) — mini-especificación v1
+Objetivo: permitir que el usuario escriba variantes habituales ("Barna", "Donosti", "NYC", "BCN", etc.) y que el sistema resuelva al sitio canónico sin ridiculizar ni "corregir" de forma agresiva.
+1) Definiciones
+* Sitio canónico: el valor oficial de sitio_dia en formato "Ciudad, País" (p. ej. Barcelona, España).
+* Alias: una cadena alternativa que los usuarios podrían escribir para referirse a un sitio canónico.
+2) Formato de almacenamiento (recomendación)
+Mantener una tabla/estructura tipo:
+Campos:
+* alias_raw (texto tal cual se quiere admitir; opcional)
+* alias_norm (alias normalizado para matching)
+* target_site_id (ID interno del sitio o clave canónica; recomendado usar un ID estable si existe)
+* target_site_label (p. ej. Barcelona, España — para UI)
+* confidence (enum): INEQUIVOCO | AMBIGUO
+* notes (opcional): contexto/uso
+Normalización (alias_norm):
+* trim + colapsar espacios
+* minúsculas
+* quitar tildes/diacríticos
+* quitar signos triviales (. , - _ /) → espacio
+* opcional: "ñ"→"n" en la normalización (solo para matching)
+Ejemplo:
+* alias_raw: Barna
+* alias_norm: barna
+* target_site_label: Barcelona, España
+* confidence: INEQUIVOCO
+3) Reglas de resolución (orden)
+* Solo se consulta alias cuando el usuario ejecuta búsqueda y no hay match exacto en el dropdown.
+* Orden de matching:
+  * Match exacto por alias_norm (primario).
+  * (Opcional v1) Match por variantes triviales (espacios dobles/puntuación) ya cubiertas por normalización.
+* Nota: Evitar fuzzy en alias. Alias debe ser determinista.
+4) Inequívoco vs ambiguo (reglas)
+INEQUIVOCO si se cumple:
+* El alias apunta a un único sitio canónico dentro de tu dataset.
+* Es uso popular y claramente identificable en tu audiencia (p. ej. barna, donosti, nyc, bcn si tú decides admitirlo).
+* No hay colisión "razonable" con otro sitio del dataset.
+AMBIGUO si:
+* El alias puede referirse a más de un sitio del dataset o del mundo real (ej. santiago, san jose, victoria, granada si tuvieras más de una, etc.).
+* El alias es un código que puede significar varias cosas según país/idioma.
+* El alias coincide con un término genérico (centro, playa, capital, etc.).
+5) Comportamiento UI
+Si alias INEQUIVOCO:
+* Resolver directamente al canónico.
+* Barra de título (Screen 2, 1 línea): Lugar: {query_original} → {target_site_label}
+* Mostrar resultados normales del lugar canónico (estancias → días).
+Si alias AMBIGUO:
+* No resolver automáticamente.
+* Tratar como "no encontrado" y pasar al flujo 2.2.3 (Google cercanos) o, si prefieres, mostrar un micro-selector con 2–4 opciones (si realmente existen varias en tu dataset).
+* Barra recomendada: Lo siento, no tengo: {query_original} (sin corrección automática).
+6) Mantenimiento del diccionario
+* El diccionario se amplía de forma incremental (cuando detectes inputs reales).
+* Si aparece un nuevo sitio que colisiona con un alias previamente inequívoco, ese alias pasa a AMBIGUO y se revisa.
+7) Ejemplos recomendados (ilustrativos)
+* Barna → Barcelona, España (INEQUIVOCO)
+* Donosti → San Sebastián, España (INEQUIVOCO)
+* NYC → Nueva York, EE. UU. (INEQUIVOCO)
+* Santiago → AMBIGUO (no resolver; flujo "no encontrado" / cercanos)
+* San José → AMBIGUO (no resolver)
 2.3 Tab ACTIVIDAD (con OpenAI)
 2.3.0 Barra de título (Screen 2) — una sola línea
 Regla: mostrar qué entendió el sistema y qué se está filtrando en una sola línea. Si no coincide, el usuario usa "Volver a Buscar".
@@ -87,7 +172,7 @@ Ordenación de items: fecha_dia ascendente; si hay varios items el mismo día, o
 * Si el usuario ya incluye lugar en la query (p. ej. "spa París"): saltar al nivel más cercano y continuar.
 * Paso final: mostrar items (ficha titulo_actividad / sitio_dia / fecha_dia).
 * Si aún quedan demasiados items en un mismo lugar (caso raro): insertar faceta temporal ligera por estancias/periodos del lugar y, tras elegir periodo, mostrar items.
-*2.3.6 Límites y fallback
+2.3.6 Límites y fallback
 * Sin badges adicionales: la claridad se consigue con titulo_actividad + sitio_dia + fecha_dia.
 * Si OpenAI falla o baja confianza: fallback a búsqueda literal + facetas deterministas (manteniendo <=12).
 2.4 Tab TODO (con OpenAI)
@@ -206,5 +291,11 @@ Reglas de aprobado: 0 errores rojos en consola; nunca pantalla vacía; <=12 dond
 * Se calcula únicamente desde dia.csv / CPT día (no desde tramos).
 * No se unen estancias no consecutivas ni se aplican heurísticas.
 * Campos calculados: fecha_desde (primera fecha_dia del bloque), fecha_hasta (última fecha_dia del bloque), sitio (sitio_dia).
-8.3 Ejecución con control
-* Migración por parches pequeños + checklist + QA por paso. Si un test falla, se corrige antes de avanzar.
+8.2.11 Lugar no encontrado y alternativas cercanas (cerrado)
+* Flujo: respetar query_original → alias inequívoco → Google Geocoding + 4 cercanos → fallback fuzzy si Google falla.
+* Google Geocoding solo se usa cuando no hay match en dropdown ni alias inequívoco.
+* Cache recomendada por query_original normalizada.
+* Diccionario de alias: tabla con alias_raw, alias_norm, target_site_id, target_site_label, confidence (INEQUIVOCO | AMBIGUO).
+* Alias INEQUIVOCO: resolver directamente al canónico. Barra: "Lugar: {query_original} → {target_site_label}".
+* Alias AMBIGUO: no resolver automáticamente. Tratar como "no encontrado" (flujo Google cercanos).
+* Mantenimiento incremental del diccionario; si un nuevo sitio colisiona con alias inequívoco, pasa a AMBIGUO.
