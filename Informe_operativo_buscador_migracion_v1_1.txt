@@ -14,7 +14,7 @@ Objetivo: diseñar y cerrar la lógica de resultados del buscador (Tabs) y dejar
 * Clic en ficha de resultado: abre single-dia.php o single-tramo-custom.php en la misma ventana/pestaña. El botón "Atrás" del navegador devuelve a Screen 2 con los resultados intactos.
 Principio rector: no saturar de fichas. Para facetas/experiencias/items, salida máxima de 12 fichas. Para listas de días, scroll infinito (chunks) con ayudas de navegación, sin separadores ni headers adicionales.
 2. Diseño de resultados por Tabs (Screen 2)
-Convención general de ficha (v1): Título + Línea 1 + Línea 2. En móvil, priorizar claridad y evitar densidad excesiva.
+Convención general de ficha (v1): Título + Subtítulo (opcional) + Línea 1 + Línea 2. El Subtítulo solo se usa cuando el tipo de ficha lo requiere (p. ej. restaurantes). En móvil, priorizar claridad y evitar densidad excesiva.
 Convención general de orden: cronológico del viaje (ascendente).
 2.1 Tab FECHA (sin OpenAI)
 2.1.1 Selector de fechas (Screen 1)
@@ -136,7 +136,7 @@ Si alias AMBIGUO:
 * Tratar como "no encontrado" y pasar al flujo 2.2.3 (Google cercanos) o, si prefieres, mostrar un micro-selector con 2–4 opciones (si realmente existen varias en tu dataset).
 * Barra recomendada: Lo siento, no tengo: {query_original} (sin corrección automática).
 6) Mantenimiento del diccionario
-* El diccionario se amplía de forma incremental (cuando detectes inputs reales).
+* El diccionario se amplica de forma incremental (cuando detectes inputs reales).
 * Si aparece un nuevo sitio que colisiona con un alias previamente inequívoco, ese alias pasa a AMBIGUO y se revisa.
 7) Ejemplos recomendados (ilustrativos)
 * Barna → Barcelona, España (INEQUIVOCO)
@@ -192,7 +192,12 @@ TODO amplía ACTIVIDAD y además resuelve búsquedas cruzadas (atributos + lugar
 * Proximidad: soportar "cerca de {lugar}" solo si {lugar} existe en los sitios del viaje (coords). Si no existe, aplicar flujo LUGAR no existe. No soportar en v1 "cerca del hotel/donde dormimos" en el buscador global.
 2.4.3 Unidades de resultado (v1)
 Items (restaurante/hospedaje/actividad) en Screen 2:
-* Restaurante: Título = nombre_restaurante + tipo_comida (entre paréntesis, en cursiva y menor prominencia si es posible). Línea 1 = sitio_dia. Línea 2 = fecha_dia.
+* Restaurante:
+  * Título: nombre_restaurante
+  * Subtítulo: tipo_comida (desayuno / almuerzo / cena — menor prominencia visual)
+  * Línea 1: sitio_dia
+  * Línea 2: fecha_dia
+  * Nota: la categoría del restaurante (Michelin, Icónico, etc.) no se muestra en la ficha de resultado; se reserva para la página individual del restaurante (single-restaurante.php), donde se presentará junto con fotos, carta, reseñas y demás detalles.
 * Orden restaurantes: fecha_dia ascendente; luego tipo_comida (desayuno -> almuerzo -> cena); luego orden_dia ascendente.
 * Hospedaje: Título = nombre_hospedaje. Línea 1 = sitio_dia. Línea 2 = fecha_dia. Orden cronológico.
 * Experiencia: ficha de experiencia (tramo) según 2.3.2.
