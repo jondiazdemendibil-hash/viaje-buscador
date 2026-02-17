@@ -43,9 +43,14 @@ FECHA v2 (opcional, fuera de alcance v1): fichas de tramo y lógica de relevanci
 * Dropdown/autocomplete por lugares existentes (CPT/ACF).
 * Tolerancia: tildes y mayúsculas mediante normalización. Typos: alias + fuzzy matching (sin OpenAI).
 2.2.2 Resultados cuando el lugar existe (Screen 2)
+Definición (v1): una "estancia" es un bloque máximo de días consecutivos con sitio_dia idéntico (canónico). Las estancias se calculan únicamente desde dia.csv / CPT día (no desde tramos). No se unen estancias no consecutivas ni se aplican heurísticas.
+Ficha de estancia (campos calculados desde DÍA):
+* Título: fecha_desde – fecha_hasta
+* Línea 1: sitio_dia
+* Sin Línea 2.
 * Barra de título: "Lugar: {sitio}".
-* Si hay 1 estancia: mostrar días (ficha estándar de FECHA).
-* Si hay 2+ estancias: mostrar fichas de periodos/estancias. Al seleccionar un periodo, mostrar los días de ese periodo.
+* Si hay 1 estancia: mostrar días directamente (ficha estándar de FECHA).
+* Si hay 2+ estancias: mostrar fichas de estancias. Al seleccionar una estancia, mostrar los días de ese bloque.
 2.2.3 Resultados cuando el lugar NO existe (Screen 2)
 Texto fijo (sin tocar migas ni contador): "Lo sentimos, no encontramos {lugar_buscado}, pero sí estos lugares cercanos".
 Ofrecer 4 alternativas cercanas (Google Maps / proximidad):
@@ -53,7 +58,7 @@ Ofrecer 4 alternativas cercanas (Google Maps / proximidad):
 * Título: sitio_dia (lugar sugerido)
 * Línea 1: ~{km} km (distancia aproximada)
 * Sin Línea 2 (evitar ambigüedad por múltiples estancias).
-Al clicar una alternativa: re-ejecutar el flujo normal del tab LUGAR para ese sitio (1 estancia -> días; 2+ estancias -> periodos -> días).
+Al clicar una alternativa: re-ejecutar el flujo normal del tab LUGAR para ese sitio (1 estancia -> días; 2+ estancias -> estancias -> días).
 2.3 Tab ACTIVIDAD (con OpenAI)
 2.3.0 Barra de título (Screen 2) — una sola línea
 Regla: mostrar qué entendió el sistema y qué se está filtrando en una sola línea. Si no coincide, el usuario usa "Volver a Buscar".
@@ -82,7 +87,7 @@ Ordenación de items: fecha_dia ascendente; si hay varios items el mismo día, o
 * Si el usuario ya incluye lugar en la query (p. ej. "spa París"): saltar al nivel más cercano y continuar.
 * Paso final: mostrar items (ficha titulo_actividad / sitio_dia / fecha_dia).
 * Si aún quedan demasiados items en un mismo lugar (caso raro): insertar faceta temporal ligera por estancias/periodos del lugar y, tras elegir periodo, mostrar items.
-* 2.3.6 Límites y fallback
+*2.3.6 Límites y fallback
 * Sin badges adicionales: la claridad se consigue con titulo_actividad + sitio_dia + fecha_dia.
 * Si OpenAI falla o baja confianza: fallback a búsqueda literal + facetas deterministas (manteniendo <=12).
 2.4 Tab TODO (con OpenAI)
@@ -196,5 +201,10 @@ Reglas de aprobado: 0 errores rojos en consola; nunca pantalla vacía; <=12 dond
 8.2.9 Navegación desde fichas (cerrado)
 * Clic en ficha de resultado abre single-dia.php o single-tramo-custom.php en la misma ventana/pestaña.
 * El botón "Atrás" del navegador devuelve a Screen 2 con los resultados intactos.
+8.2.10 Definición de estancia (cerrado)
+* Estancia (v1) = bloque máximo de días consecutivos con sitio_dia idéntico (canónico).
+* Se calcula únicamente desde dia.csv / CPT día (no desde tramos).
+* No se unen estancias no consecutivas ni se aplican heurísticas.
+* Campos calculados: fecha_desde (primera fecha_dia del bloque), fecha_hasta (última fecha_dia del bloque), sitio (sitio_dia).
 8.3 Ejecución con control
 * Migración por parches pequeños + checklist + QA por paso. Si un test falla, se corrige antes de avanzar.
